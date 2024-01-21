@@ -42,7 +42,9 @@ ggplot(toolik_ts,aes(x=date, y=daily_air_temp))+
          geom_line()+
   labs(x= 'Date', y = 'Mean daily air temp (Celsius)\n at Toolik Station')
 ```
+
 ### Use filter index() function to filer by date/time:
+
 ```{r}
 ### Filter from Dec 2010 to January 2011
 
@@ -53,6 +55,7 @@ toolik_ts %>%
 ```
 
 #Use index_by() to aggregaree time series by increments:
+
 ```{r}
 toolik_month <- toolik_ts %>% 
   index_by(yr_mo = ~ yearmonth(.)) %>% 
@@ -86,9 +89,10 @@ Energy usage by sector, in trillions of BTUs
 energy_df <- read_csv(here('data','energy.csv'))
 ```
 
-### Analysis goals: 
- * Examine patters and trends in residential energy consumption over time
- * Predict what residential energy use patterns will look like over the next 5 years
+### Analysis goals:
+
+-   Examine patters and trends in residential energy consumption over time
+-   Predict what residential energy use patterns will look like over the next 5 years
 
 ```{r}
 energy_ts <- energy_df %>% 
@@ -98,7 +102,6 @@ energy_ts <- energy_df %>%
 
 ```
 
-
 ```{r}
 ggplot(energy_ts, aes(x =date , y= energy_total, color = sector ))+
   geom_line()+
@@ -106,10 +109,11 @@ ggplot(energy_ts, aes(x =date , y= energy_total, color = sector ))+
   facet_wrap(~sector,ncol = 1)
 ```
 
- * Residential looks similar to commercial, with an upward trend at least for the first part, maybe leveling off or decreasing in recent years 
- * Seasonality - summer and winter peaks, summer peaks seem to be getting larger over time
- 
- ### SEASON PLOT
+-   Residential looks similar to commercial, with an upward trend at least for the first part, maybe leveling off or decreasing in recent years
+-   Seasonality - summer and winter peaks, summer peaks seem to be getting larger over time
+
+### SEASON PLOT
+
 ```{r}
 energy_ts %>% 
   filter(sector == "residential") %>% 
@@ -117,7 +121,9 @@ energy_ts %>%
   theme_light()+
   labs(x='Month', y="Residential Energy Consumption (trillion BTU)")
 ```
+
 ### Subseries Plot
+
 ```{r}
 energy_ts %>% 
   gg_subseries(y= energy_total)
@@ -139,15 +145,19 @@ autoplot()
 ```
 
 ### Autocorrelation function
+
 ```{r}
 energy_ts %>% 
   filter(sector =='residential') %>% 
   ACF (energy_total) %>% 
   autoplot()
+
 ```
+
 ### Forcasting by Hold Winters exponential smoothing
 
-Specify method for each component, wheather non ("N"), additive ("A"), or multiplicative ("M")
+Specify method for each component, whether non ("N"), additive ("A"), or multiplicative ("M")
+
 ```{r}
 ### Create a model
 
@@ -174,6 +184,3 @@ ggplot(energy_predicted)+
 ggplot(energy_predicted, aes(x=.resid))+
   geom_histogram()
 ```
-
-
-

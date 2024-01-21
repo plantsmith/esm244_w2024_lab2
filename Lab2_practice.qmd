@@ -1,0 +1,136 @@
+---
+title: "Lab 2 Practice"
+author: "Natalie Smith"
+format:
+  html:
+    code-fold: show
+    toc: true
+    number-sections: true
+editor: visual 
+excecute: 
+  echo: true
+  message: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(tsibble)
+library(feasts)
+library(fable)
+```
+
+import data
+```{r}
+co2_df <- read.csv(here("data/co2_mauna_loa.csv"))
+                    
+```
+
+### Analysis Part 1: 
+
+Convert the date column to a proper date format, then turn the dataframe into a time-series dataframe.
+
+```{r}
+co2_ts <-co2_df %>% 
+  mutate(date = tsibble::yearmonth(date)) %>% 
+  as_tsibble(key = NULL,
+             index = date) 
+
+```
+Create an exploratory season plot and an exploratory subseries plot.
+
+```{r}
+ggplot(co2_ts, aes(x = date, y = co2_mean)) +
+  geom_line() +
+  labs(x = 'Date', y = 'CO2 Means\n at Mauna Loa Station')
+
+```
+Create an exploratory season plot and an exploratory subseries plot.
+
+```{r}
+co2_ts %>% 
+  gg_season(y=co2_mean, pal=hcl.colors(n=9))+
+  theme_light()+
+  labs(x='Month', y="CO2 (ppm)")
+```
+
+```{r}
+co2_ts %>%
+  gg_subseries(y = co2_mean)+ theme_light()+
+  labs(x='Dte', y="CO2 Mean (ppm)")
+
+```
+### Analysis Part 2: 
+Create an ETS exponential smoothing model, including (if appropriate) seasonality and trend.  Consider whether the trend and seasonality should be considered as additive or multiplicative (you can try different combinations to see how it changes your forecast).
+
+```{r}
+dcmp <- co2_ts %>% 
+  model(feasts::STL(co2_mean ~ season(period = '1 year')+ trend(window=49)))
+
+
+components(dcmp) %>% 
+autoplot()
+```
+Use the ETS model to forecast CO2 levels for the next 20 years, then plot that forecast on the original data using autoplot().
+```{r}
+co2_fit <- co2_ts %>% 
+  model(ets = ETS(co2_mean ~ season(method = "M") + trend(method = "A")))
+
+co2_forecast <- co2_fit %>% 
+  forecast(h = "20 years")
+
+co2_forecast %>% 
+  autoplot(co2_ts) +
+  labs(title = "CO2 Forecast (20 Years)",
+       subtitle = "ETS Model",
+       x = "Year",
+       y = "CO2 Mean (ppm)") +
+  theme_minimal() + 
+  theme(legend.position = "bottom") 
+
+```
+Use the ETS model and broom::augment to fit modeled values against the actual observed values.  Plot the two together, and plot a histogram of the residuals.  How well does our model fit our historic observed values?
+```{r}
+co2_predicted <- co2_fit %>% 
+  broom::augment()
+
+ggplot(co2_predicted)+
+  geom_line(aes(x= date, y= co2_mean))+
+  geom_line(aes(x= date, y= .fitted), color = "red", alpha =.7)
+
+ggplot(co2_predicted, aes(x=.resid))+
+  geom_histogram()
+```
+
+Optional: create an ETS model just trained on data through 2003, and then create a 20-year forecast - and then compare those forecasted values against the observed values from 2004-2023
+
+```{r}
+co2_fit <- co2_ts %>% 
+    filter_index(. ~ "2003 Jan") %>% 
+  model(ets = ETS(co2_mean ~ season(method = "M") + trend(method = "A")))
+
+co2_forecast <- co2_fit %>% 
+  forecast(h = "20 years")
+
+co2_forecast %>% 
+  autoplot(co2_ts) +
+  labs(title = "CO2 Forecast (20 Years)",
+       subtitle = "Until Jan 2003",
+       x = "Year",
+       y = "CO2 Mean (ppm)") +
+  theme_minimal() + 
+  theme(legend.position = "bottom") 
+```
+Write a sentence or two describing the trends you see in the exploratory plots.  Describe any seasonality, trend, or cyclicality you observe.
+
+Seasonality is characterized by higher values in spring and lower values in the fall. Simultaneously, there is an upward trend, indicating a consistent increase over time. There is no pattern in the noise. 
+
+In your ETS time series model, explain whether an additive or multiplicative model would make more sense, in terms of the relationship between carbon dioxide, humans, and environmental factors.
+
+In our time series, the seasonality exhibits varying variability over time and remains non-variable. The identified trend is linear, characterized by consistent variability and a clear linear pattern. 
+
+The seasonality is based on environmental factors and the trend is based on anthropogenic factors!
+
+
+
